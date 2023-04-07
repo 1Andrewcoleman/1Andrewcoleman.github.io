@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NWS WWAs</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script>
+    // Initialize the map
+    const map = L.map('map').setView([40.750220, -99.476964], 5);
+
+    // Add Mapbox tile layer
+    const accessToken = 'pk.eyJ1IjoiYW5kcmV3YzMxIiwiYSI6ImNsZnNwbW40OTA0M3czbW83dXkxcThseTgifQ.tphp4wYRnJjSPjwF0qa15g';
+    const streetsLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=' + accessToken, {
+      attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> | <a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+      tileSize: 512,
+      maxZoom: 18,
+      zoomOffset: -1
+    }).addTo(map);
+
+    // Add a satellite layer
+    const satelliteLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + accessToken, {
+      attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> | <a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+      tileSize: 512,
+      maxZoom: 18,
+      zoomOffset: -1
+    });
+    // Add a dark layer
+    const darkLayer = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/dark-v10/tiles/{z}/{x}/{y}?access_token=' + accessToken, {
+      attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> | <a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+      tileSize: 512,
+      maxZoom: 18,
+      zoomOffset: -1
+    });
+
+    // Add basemap layers to control
+    const baseMaps = {
+      'Streets': streetsLayer,
+      'Satellite': satelliteLayer,
+      'Dark': darkLayer
+    };
+
+    // Add the NWS WWA layer as an overlay to each base layer
+    const wmsLayer = L.tileLayer.wms('https://idpgis.ncep.noaa.gov/arcgis/services/NWS_Forecasts_Guidance_Warnings/watch_warn_adv/MapServer/WMSServer', {
+      layers: '0',
+      format: 'image/png',
+      transparent: true,
+      opacity: 0.5,
+      attribution: 'NWS WWAs'
+    });
+
+    // Add the Radar tile layer
+    const radarLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png', {
+      attribution: 'Base Reflectivity © Iowa State University',
+      tileSize: 512,
+      zoomOffset: -1
+    });
+
+    const streetsLayerGroup = L.layerGroup([streetsLayer, wmsLayer]);
+    const satelliteLayerGroup = L.layerGroup([satelliteLayer, wmsLayer]);
+    const darkLayerGroup = L.layerGroup([darkLayer, wmsLayer, radarLayer]);
+
+    // Set default layers
+    streetsLayerGroup.addTo(map);
+
+    // Add basemap layers and overlays to control
+    const overlays = {
+      'NWS WWAs': wmsLayer,
+      'Radar': radarLayer
+    };
+    L.control.layers(baseMaps, overlays).addTo(map);
+
+    // Update NWS WWA layer every 15 seconds
+    setInterval(function() {
+      map.removeLayer(wmsLayer);
+      wmsLayer.setParams({
+        _ts: Date.now()
+      });
+      map.addLayer(wmsLayer);
+    }, 15000);
+  </script>
+</body>
+</html>
