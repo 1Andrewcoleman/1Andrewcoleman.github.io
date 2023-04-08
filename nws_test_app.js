@@ -4,6 +4,10 @@ const accessToken =
 // Get the tbody element
 var tbody = document.querySelector("#product-table tbody");
 
+document.getElementById('refresh-button').addEventListener('click', function() {
+  fetchData();
+});
+
 // Create a dropdown list of products
 const productDropdown = document.querySelector("#product-filter");
 const allOption = document.createElement("option");
@@ -81,7 +85,7 @@ const clear_menu = () => {
 // Function to fetch data from the API and update the table
 const fetchData = () => {
   // Clear the table body
-  //tbody.innerHTML = '';
+  tbody.innerHTML = '';
   // Make an HTTP request to the endpoint and retrieve the response as JSON
   fetch(endpoint)
     .then((response) => response.json())
