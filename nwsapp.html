@@ -17,6 +17,16 @@
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src='https://cdn.jsdelivr.net/npm/shpjs@4.0.4/dist/shp.min.js'></script>
   <script>
+
+    async function fetchWithCORSProxy(url) {
+      const corsProxyUrl = 'https://api.allorigins.win/get?url=';
+      const proxiedUrl = corsProxyUrl + encodeURIComponent(url);
+      const response = await fetch(proxiedUrl);
+      const data = await response.json();
+      return new Response(data.contents, { headers: { 'Content-Type': 'application/json' } });
+    }
+
+
     async function addShapefileToMap(shapefileUrl, map) {
       try {
         console.log('Loading shapefile:', shapefileUrl); // Add logging statement
@@ -44,6 +54,54 @@
         console.error('Error adding shapefile to map:', error);
       }
     }
+
+    async function addGeoJsonToMap(baseLink, map) {
+      try {
+        const layerGroups = {
+          day1: L.layerGroup(),
+          day2: L.layerGroup(),
+          day3: L.layerGroup(),
+        };
+
+        for (let day = 1; day <= 3; day++) {
+          const geojsonUrl = `${baseLink}${day}otlk_cat.nolyr.geojson`;
+          console.log('Loading GeoJSON:', geojsonUrl); // Add logging statement
+          const response = await fetchWithCORSProxy(geojsonUrl); // Use the CORS proxy
+          const geojson = await response.json();
+
+          L.geoJSON(geojson, {
+            style: function (feature) {
+              return {
+                color: feature.properties.stroke,
+                fillColor: feature.properties.fill,
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.5,
+              };
+            },
+            onEachFeature: function (feature, layer) {
+              // Add a click event listener to each polygon layer
+              layer.on('click', function () {
+                layer.bindPopup(JSON.stringify(feature.properties.LABEL2)).openPopup();
+              });
+            },
+          }).addTo(layerGroups[`day${day}`]);
+        }
+
+        const overlayMaps = {
+          'Day 1 Outlook': layerGroups.day1,
+          'Day 2 Outlook': layerGroups.day2,
+          'Day 3 Outlook': layerGroups.day3,
+        };
+
+        L.control.layers(null, overlayMaps).addTo(map);
+      } catch (error) {
+        console.error('Error adding GeoJSON to map:', error);
+      }
+    }
+
+
+
 
     // Initialize the map
     const map = L.map('map').setView([27.8742, - 81.7814], 8);
@@ -97,6 +155,9 @@
 
     const shapefileUrl = 'shapefiles/fpl_shp.zip';
     addShapefileToMap(shapefileUrl, map);
+
+    const baseLink = 'https://www.spc.noaa.gov/products/outlook/day';
+    addGeoJsonToMap(baseLink, map);
 
     const streetsLayerGroup = L.layerGroup([streetsLayer, wmsLayer]);
     const satelliteLayerGroup = L.layerGroup([satelliteLayer, wmsLayer]);
