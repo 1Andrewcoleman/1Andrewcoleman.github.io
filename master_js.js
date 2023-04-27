@@ -252,7 +252,7 @@ const fetchData = () => {
               })
               .replace(/\/\d{4}/, "")
               .replace(",", "");
-            issuanceCell.textContent = formattedDate + " UTC";;
+            issuanceCell.textContent = formattedDate;;
             row.appendChild(issuanceCell);
 
             var productCell = document.createElement("td");
@@ -311,7 +311,7 @@ const fetchData = () => {
                 })
                 .replace(/\/\d{4}/, "")
                 .replace(",", "");
-              issuanceCell.textContent = formattedDate + " UTC"; ;
+              issuanceCell.textContent = formattedDate; ;
               row.appendChild(issuanceCell);
 
               var productCell = document.createElement("td");
