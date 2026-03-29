@@ -104,7 +104,7 @@
 
 
     // Initialize the map
-    const map = L.map('map').setView([27.8742, - 81.7814], 8);
+    const map = L.map('map').setView([27.8742, -81.7814], 8);
 
     // Add Mapbox tile layer
     const accessToken = 'pk.eyJ1IjoiYW5kcmV3YzMxIiwiYSI6ImNsZnNwbW40OTA0M3czbW83dXkxcThseTgifQ.tphp4wYRnJjSPjwF0qa15g';
@@ -160,8 +160,6 @@
     addGeoJsonToMap(baseLink, map);
 
     const streetsLayerGroup = L.layerGroup([streetsLayer, wmsLayer]);
-    const satelliteLayerGroup = L.layerGroup([satelliteLayer, wmsLayer]);
-    const darkLayerGroup = L.layerGroup([darkLayer, wmsLayer, radarLayer]);
 
     // Set default layers
     streetsLayerGroup.addTo(map);
