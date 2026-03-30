@@ -137,9 +137,11 @@
       'Dark': darkLayer
     };
 
-    // Add the NWS WWA layer as an overlay to each base layer
-    const wmsLayer = L.tileLayer.wms('https://idpgis.ncep.noaa.gov/arcgis/services/NWS_Forecasts_Guidance_Warnings/watch_warn_adv/MapServer/WMSServer', {
-      layers: '0',
+    // Add the NWS WWA layer as an overlay (opengeo.ncep.noaa.gov replaced the
+    // decommissioned idpgis.ncep.noaa.gov endpoint; hazards = long-duration
+    // watches/warnings/advisories, warnings = short-fuse tornado/severe/marine)
+    const wmsLayer = L.tileLayer.wms('https://opengeo.ncep.noaa.gov/geoserver/wwa/ows', {
+      layers: 'hazards,warnings',
       format: 'image/png',
       transparent: true,
       opacity: 0.5,
@@ -171,13 +173,11 @@
     };
     L.control.layers(baseMaps, overlays).addTo(map);
 
-    // Update NWS WWA layer every 15 seconds
+    // Refresh NWS WWA tiles every 15 seconds without removing/re-adding the
+    // layer (setParams alone triggers a tile reload; remove+add causes flicker
+    // and forcibly re-enables the layer even when the user has turned it off)
     setInterval(function() {
-      map.removeLayer(wmsLayer);
-      wmsLayer.setParams({
-        _ts: Date.now()
-      });
-      map.addLayer(wmsLayer);
+      wmsLayer.setParams({ _ts: Date.now() }, false);
     }, 15000);
   </script>
 </body>
