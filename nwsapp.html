@@ -72,7 +72,8 @@
         const layerGroup = L.layerGroup();
         const geojsonUrl = `${baseLink}${day}otlk_cat.nolyr.geojson`;
         try {
-          const response = await fetchWithCORSProxy(geojsonUrl);
+          // SPC serves Access-Control-Allow-Origin: * so no proxy needed
+          const response = await fetch(geojsonUrl);
           const geojson = await response.json();
           L.geoJSON(geojson, {
             style: function (feature) {
