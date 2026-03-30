@@ -23,7 +23,14 @@
       const proxiedUrl = corsProxyUrl + encodeURIComponent(url);
       const response = await fetch(proxiedUrl);
       const data = await response.json();
-      return new Response(data.contents, { headers: { 'Content-Type': 'application/json' } });
+
+      // allorigins encodes binary/non-HTML responses as base64 data URIs:
+      // "data:<mime>;base64,<payload>" — decode before handing to JSON.parse
+      let contents = data.contents;
+      if (typeof contents === 'string' && contents.startsWith('data:')) {
+        contents = atob(contents.split(',')[1]);
+      }
+      return new Response(contents, { headers: { 'Content-Type': 'application/json' } });
     }
 
 
@@ -55,20 +62,18 @@
       }
     }
 
-    async function addGeoJsonToMap(baseLink, map) {
-      try {
-        const layerGroups = {
-          day1: L.layerGroup(),
-          day2: L.layerGroup(),
-          day3: L.layerGroup(),
-        };
+    // Returns an object of { 'Day N Outlook': layerGroup } so the caller can
+    // merge them into the shared Leaflet layer control.
+    async function fetchSPCOutlooks() {
+      const baseLink = 'https://www.spc.noaa.gov/products/outlook/day';
+      const overlays = {};
 
-        for (let day = 1; day <= 3; day++) {
-          const geojsonUrl = `${baseLink}${day}otlk_cat.nolyr.geojson`;
-          console.log('Loading GeoJSON:', geojsonUrl); // Add logging statement
-          const response = await fetchWithCORSProxy(geojsonUrl); // Use the CORS proxy
+      for (let day = 1; day <= 3; day++) {
+        const layerGroup = L.layerGroup();
+        const geojsonUrl = `${baseLink}${day}otlk_cat.nolyr.geojson`;
+        try {
+          const response = await fetchWithCORSProxy(geojsonUrl);
           const geojson = await response.json();
-
           L.geoJSON(geojson, {
             style: function (feature) {
               return {
@@ -80,24 +85,18 @@
               };
             },
             onEachFeature: function (feature, layer) {
-              // Add a click event listener to each polygon layer
               layer.on('click', function () {
-                layer.bindPopup(JSON.stringify(feature.properties.LABEL2)).openPopup();
+                layer.bindPopup(feature.properties.LABEL2 || feature.properties.LABEL || '').openPopup();
               });
             },
-          }).addTo(layerGroups[`day${day}`]);
+          }).addTo(layerGroup);
+        } catch (err) {
+          console.error(`Error loading Day ${day} SPC outlook:`, err);
         }
-
-        const overlayMaps = {
-          'Day 1 Outlook': layerGroups.day1,
-          'Day 2 Outlook': layerGroups.day2,
-          'Day 3 Outlook': layerGroups.day3,
-        };
-
-        L.control.layers(null, overlayMaps).addTo(map);
-      } catch (error) {
-        console.error('Error adding GeoJSON to map:', error);
+        overlays[`SPC Day ${day} Outlook`] = layerGroup;
       }
+
+      return overlays;
     }
 
 
@@ -155,23 +154,25 @@
       zoomOffset: -1
     });
 
-    const shapefileUrl = 'shapefiles/fpl_shp.zip';
-    addShapefileToMap(shapefileUrl, map);
+    addShapefileToMap('shapefiles/fpl_shp.zip', map);
 
-    const baseLink = 'https://www.spc.noaa.gov/products/outlook/day';
-    addGeoJsonToMap(baseLink, map);
+    // Add streets basemap + WWA layer on load
+    wmsLayer.addTo(map);
 
-    const streetsLayerGroup = L.layerGroup([streetsLayer, wmsLayer]);
-
-    // Set default layers
-    streetsLayerGroup.addTo(map);
-
-    // Add basemap layers and overlays to control
+    // Build unified overlay control: start with always-present layers, then
+    // merge in SPC outlooks once they resolve
     const overlays = {
       'NWS WWAs': wmsLayer,
-      'Radar': radarLayer
+      'Radar': radarLayer,
     };
-    L.control.layers(baseMaps, overlays).addTo(map);
+    const layerControl = L.control.layers(baseMaps, overlays).addTo(map);
+
+    fetchSPCOutlooks().then(function (spcOverlays) {
+      Object.entries(spcOverlays).forEach(function ([name, layer]) {
+        layerControl.addOverlay(layer, name);
+      });
+    });
+
 
     // Refresh NWS WWA tiles every 15 seconds without removing/re-adding the
     // layer (setParams alone triggers a tile reload; remove+add causes flicker
