@@ -71,12 +71,11 @@ const addShapefileToMapFunction = `
 `;
 
 const handleViewProductClick = (item) => {
-  let wmo = JSON.stringify(item.properties.parameters.WMOidentifier);
-  wmo = wmo.split(" ")[1];
+  const wmoRaw = item.properties?.parameters?.WMOidentifier?.[0] ?? '';
+  const wmo = wmoRaw.split(' ')[1] ?? '';
   const formattedData = `\nFORECAST OFFICE: ${item.properties.senderName}  (${wmo})\n\nEVENT: ${item.properties.event}\n\nAREAS AFFECTED...${item.properties.areaDesc}\n\n${item.properties.description}\n `;
 
   if (!item.geometry || !item.geometry.coordinates) {
-    console.error("Coordinates not found in the data:", item);
     const newPage = window.open("", "_blank");
     newPage.document.write("<!DOCTYPE html>");
     newPage.document.write("<html>");
@@ -106,7 +105,7 @@ const handleViewProductClick = (item) => {
         fillOpacity: 0.5
       }
     }).addTo(map);
-    const popupData = '${JSON.stringify(formattedData)}';
+    const popupData = ${JSON.stringify(formattedData)};
     geojsonLayer.on('click', function(e) {
       L.popup()
         .setLatLng(e.latlng)
@@ -195,9 +194,8 @@ const buildTableRow = (item) => {
   row.appendChild(threatCell);
 
   const stationCell = document.createElement("td");
-  stationCell.textContent = JSON.stringify(
-    item.properties.parameters.WMOidentifier
-  ).split(" ")[1];
+  const wmoIdentifier = item.properties?.parameters?.WMOidentifier?.[0] ?? '';
+  stationCell.textContent = wmoIdentifier.split(' ')[1] ?? '';
   row.appendChild(stationCell);
 
   return row;
